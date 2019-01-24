@@ -16,7 +16,7 @@ const shopRoutes = require('./routes/shop');
 
 // db.execute('SELECT * FROM products')
 //     .then(result => {
-//         console.log(result[1]);
+//         console.log(result);
 //     })
 //     .catch(err => {
 //         console.log(err);
