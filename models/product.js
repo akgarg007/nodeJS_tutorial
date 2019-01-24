@@ -62,7 +62,6 @@ module.exports = class Product {
       });
     });
   }
-
   static fetchAll(cb) {
     getProductsFromFile(cb);
   }
