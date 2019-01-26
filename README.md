@@ -25,6 +25,12 @@ When starting a new project you won't have a database structure and using Sequel
 // if the model name is product
 // then it will create table "products"
 // with timestamps as in Laravel Database Migrations
+
+// <http://docs.sequelizejs.com/manual/tutorial/associations.html#belongs-to-many-associations>
+// Cart belongs to many products - ManytoMany
+Cart.belongsToMany(Product, { through: CartItem });
+Product.belongsToMany(Cart, { through: CartItem });
+
 sequelize.sync()
     .then(result => {
         // console.log(result);
