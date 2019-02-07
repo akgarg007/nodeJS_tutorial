@@ -2,63 +2,82 @@ const path = require('path');
 
 const express = require('express');
 const bodyParser = require('body-parser');
-
 const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
 
 const errorController = require('./controllers/error');
-
-// Import User Model
 const User = require('./models/user');
 
+const MONGODB_URI =
+    'mongodb+srv://akgarg007:rAlWxIauWxSGry7y@cluster0-bwmrr.mongodb.net/shop';
+
 const app = express();
+const store = new MongoDBStore({
+    uri: MONGODB_URI,
+    collection: 'sessions'
+});
 
 app.set('view engine', 'ejs');
 app.set('views', 'views');
 
 const adminRoutes = require('./routes/admin');
 const shopRoutes = require('./routes/shop');
+const authRoutes = require('./routes/auth');
 
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({
+    extended: false
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use((req, res, next) =>{
-    User.findById('5c4f38cb45441c274c7c9be7')
-    .then(user => {
-        // this is full mongoose model, we can call all the mongoose models and methods on this req.user object
-        req.user = user;
-        next();
+
+app.use(
+    session({
+        secret: 'my secret',
+        resave: false,
+        saveUninitialized: false,
+        store: store
     })
-    .catch(err => console.log(err))
-})
+    );
 
-// app.use((req, res, next) => {
-//     console.log(req.user);
-//     next()
-// })
+    app.use((req, res, next) =>{
+        if(!req.session.user){
+            return next();
+        }
+        User.findById(req.session.user._id)
+            .then(user => {
+                // this is full mongoose model, we can call all the mongoose models
+                // console.log(req.session.isLoggedIn);
 
+                req.user = user;
+                next();
+            })
+            .catch(err => console.log(err));
+
+    });
 app.use('/admin', adminRoutes);
 app.use(shopRoutes);
+app.use(authRoutes);
 
 app.use(errorController.get404);
 
-mongoose.connect('mongodb+srv://akgarg007:Zwtlieat65qHNq9s@cluster0-bwmrr.mongodb.net/shop?retryWrites=true')
-.then(result => {
-    // console.log('ok');
-    User.findOne().then(user => {
-        // console.log(user);
-        if(!user){
-            const user = new User({
-                name: 'Ashwani Garg',
-                email: 'akgarg007@gmail.com',
-                cart: {
-                    items:[]
-                }
-            });
-            user.save();
-        }
+mongoose
+    .connect(MONGODB_URI)
+    .then(result => {
+        User.findOne().then(user => {
+            if (!user) {
+                const user = new User({
+                    name: 'Ashwani',
+                    email: 'akgarg007@gmail.com',
+                    cart: {
+                        items: []
+                    }
+                });
+                user.save();
+            }
+        });
+        app.listen(3000);
     })
-    app.listen(3000);
-})
-.catch(err => console.log(err));
-
-
+    .catch(err => {
+        console.log(err);
+    });
