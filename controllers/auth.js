@@ -1,29 +1,91 @@
 const User = require('../models/user');
-
+const bcrypt = require('bcryptjs');
 exports.getLogin = (req, res, next) => {
-    res.render('auth/login', {
-        path: '/login',
-        pageTitle: 'Login',
-        isAuthenticated: false
-    });
+  res.render('auth/login', {
+    path: '/login',
+    pageTitle: 'Login',
+    isAuthenticated: false
+  });
+};
+
+exports.getSignup = (req, res, next) => {
+  res.render('auth/signup', {
+    path: '/signup',
+    pageTitle: 'Signup',
+    isAuthenticated: false
+  });
 };
 
 exports.postLogin = (req, res, next) => {
-    User.findById('5c4f38cb45441c274c7c9be7')
-        .then(user => {
-            // this is full mongoose model, we can call all the mongoose models
-            // and methods on this req.user object
-            req.session.isLoggedIn = true;
-            req.session.user = user;
-            // console.log(req.session.isLoggedIn);
+  const email = req.body.email;
+  const password  = req.body.password;
+  User.findOne({email: email})
+    .then(user => {
+      // if email not found
+      if(!user){
+        return res.redirect('/login');
+      }
+      // now vlaidate the password
+      bcrypt.compare(password, user.password)
+      .then(doMatch => {
+        if(doMatch){
+          // if password matched with fetched user's password
+          req.session.isLoggedIn = true;
+          req.session.user = user;
+          return req.session.save(err => {
+            console.log(err);
             res.redirect('/');
-        })
-        .catch(err => console.log(err));
+          });
+        }
+        // if password not matched
+        res.redirect('/login');
+      })
+      .catch(err => {
+        console.log(err);
+        res.redirect('/login');
+      });
+
+    })
+    .catch(err => console.log(err));
+};
+
+exports.postSignup = (req, res, next) => {
+  const email = req.body.email;
+  const password = req.body.password;
+  const confirmPassword = req.body.confirmPassword;
+
+  // check if email already exists, using mongoose User model
+  User.findOne({email: email})
+  .then(userDoc => {
+    if(userDoc){
+      return res.redirect('/signup');
+    }
+
+    return bcrypt
+    .hash(password, 12)
+    .then(hashedPassword => {
+        const user = new User({
+          email: email,
+          password: hashedPassword,
+          cart: {
+            items: []
+          }
+        });
+        return user.save();
+      })
+      .then(result => {
+        res.redirect('/login');
+      });
+  })
+
+  .catch(err => {
+    console.log(err);
+  });
 };
 
 exports.postLogout = (req, res, next) => {
-    req.session.destroy(err => {
-        console.log(req.session);
-        res.redirect('/');
-    });
+  req.session.destroy(err => {
+    console.log(err);
+    res.redirect('/');
+  });
 };
